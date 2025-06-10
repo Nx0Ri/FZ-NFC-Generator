@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>NFC Generator JS (Flipper/NFC Maker)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; background: #181c20; color: #eee; margin: 0; }
+        .container { max-width: 700px; margin: 40px auto; background: #23272c; border-radius: 12px; padding: 32px; box-shadow: 0 0 24px #0008; }
+        h1 { text-align: center; }
+        label { display: block; margin-top: 18px; }
+        input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; border: none; background: #181c20; color: #eee; }
+        button { margin-top: 24px; padding: 12px 24px; border: none; border-radius: 6px; background: #ff9100; color: #23272c; font-weight: bold; cursor: pointer; }
+        pre { background: #111; padding: 12px; border-radius: 6px; margin-top: 24px; overflow-x: auto; }
+        .footer { text-align: center; margin-top: 32px; color: #888; font-size: 0.9em; }
+        a { color: #ff9100; }
+        .actions { display: flex; gap: 16px; margin-top: 16px; }
+        .actions button, .actions a { flex: 1; }
+        #flipperHelp { color: #aaa; font-size: 0.95em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>NFC Generator (JS, Flipper/NFC Maker)</h1>
+    <form id="nfcForm">
+        <label>Тип карты
+            <select id="cardType">
+                <option value="1">NTAG 203</option>
+                <option value="2">NTAG 213</option>
+                <option value="3">NTAG 215</option>
+                <option value="4">NTAG 216</option>
+                <option value="5">NTAG I2C 1K</option>
+                <option value="6">NTAG I2C 2K</option>
+                <option value="7">MIFARE Classic Mini 0.3K</option>
+                <option value="8">MIFARE Classic 1K UID4</option>
+                <option value="9">MIFARE Classic 1K UID7</option>
+                <option value="10">MIFARE Classic 4K UID4</option>
+                <option value="11">MIFARE Classic 4K UID7</option>
+                <option value="12">SLIX</option>
+                <option value="13">SLIX-S</option>
+                <option value="14">SLIX-L</option>
+                <option value="15">SLIX2</option>
+            </select>
+        </label>
+        <label>Тип данных
+            <select id="tagType">
+                <option value="1">URL</option>
+                <option value="2">Phone</option>
+                <option value="3">Email</option>
+                <option value="4">Text</option>
+                <option value="5">WiFi</option>
+                <option value="6">Geo</option>
+                <option value="7">SMS</option>
+                <option value="8">vCard</option>
+                <option value="9">App (AAR)</option>
+                <option value="10">Custom MIME</option>
+                <option value="11">FaceTime</option>
+                <option value="12">FaceTime Audio</option>
+                <option value="13">Apple Maps</option>
+                <option value="14">HomeKit</option>
+            </select>
+        </label>
+        <label>Данные (см. подсказку ниже)
+            <textarea id="data" rows="3" placeholder="https://example.com или +1234567890 или SSID,Password,WPA"></textarea>
+        </label>
+        <label>UID (опционально, hex через пробел)</label>
+        <input id="uid" type="text" placeholder="04 12 34 56 78 9A BC">
+        <label>Имя файла (без .nfc)</label>
+        <input id="filename" type="text" placeholder="my_nfc_tag">
+        <button type="submit">Сгенерировать NFC-дамп</button>
+    </form>
+    <div style="color:#aaa;font-size:0.95em;margin-top:10px;">
+        <b>Подсказки по данным:</b><br>
+        <b>WiFi:</b> SSID,Password,WPA<br>
+        <b>Geo:</b> 55.75,37.61<br>
+        <b>SMS:</b> +79991234567,Hello<br>
+        <b>vCard:</b> BEGIN:VCARD\nVERSION:3.0\nFN:Name\nTEL:1234567890\nEND:VCARD<br>
+        <b>Custom MIME:</b> mime/type, data
+    </div>
+    <div class="actions" style="display:none;" id="actionsBlock">
+        <a id="downloadBtn" href="#" download style="text-align:center; background:#ff9100; color:#23272c; border-radius:6px; padding:12px 0; text-decoration:none; font-weight:bold;">Скачать .nfc</a>
+        <button type="button" id="sendFlipperBtn" style="background:#23272c; color:#ff9100; border:2px solid #ff9100;">Отправить на Flipper (WebSerial)</button>
+    </div>
+    <pre id="nfcDump"></pre>
+    <div id="flipperHelp" style="display:none;">
+        <b>WebSerial:</b> Подключите Flipper Zero в режиме "CLI" (Меню → Applications → CLI), выберите порт и подтвердите.<br>
+        Файл будет записан в <code>/ext/nfc/</code>.<br>
+        <b>Если WebSerial не работает:</b> скачайте файл и скопируйте его вручную на Flipper.
+    </div>
+    <div class="footer">
+        <p>Сделано для <a href="https://github.com/flipperdevices/flipperzero" target="_blank">Flipper Zero</a> | <a href="https://github.com/yourusername/yourrepo" target="_blank">GitHub</a></p>
+        <p>Генерация полностью на JS, можно использовать на GitHub Pages</p>
+    </div>
+</div>
+<script>
+function randomUID(len, first) {
+    let arr = [first];
+    for (let i = 1; i < len; ++i) arr.push(Math.floor(Math.random()*256));
+    return arr;
+}
+function hexUID(arr) {
+    return arr.map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+}
+function parseUID(str, defLen, defFirst) {
+    if (!str) return randomUID(defLen, defFirst);
+    let arr = str.trim().split(/[\s,]+/).map(x=>parseInt(x,16));
+    if (arr.length !== defLen) return randomUID(defLen, defFirst);
+    arr[0] = defFirst; // enforce first byte
+    return arr;
+}
+function ndefBytes(tagType, data) {
+    // NDEF генерация (URL/Text/WiFi/Geo/SMS/vCard/...)
+    if (tagType == 1) { // URL
+        let url = data;
+        let prefix = url.startsWith('https://') ? 0x04 : 0x03;
+        url = url.replace(/^https?:\/\//,'');
+        let payload = [prefix, ...Array.from(url).map(c=>c.charCodeAt(0))];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 2) { // Phone
+        let payload = [0x05, ...Array.from(data).map(c=>c.charCodeAt(0))];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 3) { // Email
+        let payload = [0x06, ...Array.from(data).map(c=>c.charCodeAt(0))];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 4) { // Text
+        let lang = 'en';
+        let payload = [lang.length, ...Array.from(lang).map(c=>c.charCodeAt(0)), ...Array.from(data).map(c=>c.charCodeAt(0))];
+        let ndef = [0xD1,0x01,payload.length,0x54,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 5) { // WiFi
+        let [ssid,pwd,auth] = data.split(',');
+        ssid = ssid||''; pwd = pwd||''; auth = (auth||'').toUpperCase();
+        let auth_types = {WPA:[0x00,0x02],WEP:[0x00,0x01],NONE:[0x00,0x00]};
+        let auth_bytes = auth_types[auth]||[0x00,0x00];
+        let ssid_bytes = Array.from(ssid).map(c=>c.charCodeAt(0));
+        let pwd_bytes = Array.from(pwd).map(c=>c.charCodeAt(0));
+        let payload = [0x10,0x45,ssid_bytes.length,...ssid_bytes,0x10,0x27,pwd_bytes.length,...pwd_bytes,0x10,0x03,0x02,...auth_bytes];
+        let type = Array.from('application/vnd.wfa.wsc').map(c=>c.charCodeAt(0));
+        let ndef = [0xD2,type.length,payload.length,...type,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 6) { // Geo
+        let [lat,lon] = data.split(',');
+        let payload = [0x1F, ...Array.from(`${lat},${lon}`).map(c=>c.charCodeAt(0))];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 7) { // SMS
+        let [num,body] = data.split(',');
+        let payload = [ ...Array.from(`sms:${num}?body=${body}`).map(c=>c.charCodeAt(0)) ];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 8) { // vCard
+        let payload = Array.from(data).map(c=>c.charCodeAt(0));
+        let type = Array.from('text/x-vCard').map(c=>c.charCodeAt(0));
+        let ndef = [0xD2,type.length,payload.length,...type,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 9) { // App (AAR)
+        let payload = Array.from(data).map(c=>c.charCodeAt(0));
+        let type = Array.from('android.com:pkg').map(c=>c.charCodeAt(0));
+        let ndef = [0xD4,type.length,payload.length,...type,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 10) { // Custom MIME
+        let [mime,dat] = data.split(',');
+        let payload = Array.from((dat||'')).map(c=>c.charCodeAt(0));
+        let type = Array.from(mime||'').map(c=>c.charCodeAt(0));
+        let ndef = [0xD2,type.length,payload.length,...type,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 11) { // FaceTime
+        let payload = [ ...Array.from(`facetime://${data}`).map(c=>c.charCodeAt(0)) ];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 12) { // FaceTime Audio
+        let payload = [ ...Array.from(`facetime-audio://${data}`).map(c=>c.charCodeAt(0)) ];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 13) { // Apple Maps
+        let payload = [ ...Array.from(`http://maps.apple.com/?address=${data}`).map(c=>c.charCodeAt(0)) ];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    if (tagType == 14) { // HomeKit
+        let payload = [ ...Array.from(`X-HM://${data}`).map(c=>c.charCodeAt(0)) ];
+        let ndef = [0xD1,0x01,payload.length,0x55,...payload];
+        return [0x03,ndef.length,...ndef,0xFE];
+    }
+    // fallback
+    return ndefBytes(1, data);
+}
+
+function pad(arr, len) {
+    let out = arr.slice();
+    while (out.length < len) out.push(0x00);
+    return out;
+}
+
+function generateMifareClassic(cardType, tagType, data, uid) {
+    // cardType: 7-11
+    let sector_count, blocks_per_sector, uid_len, card_name;
+    if (cardType == 7) { sector_count=5; blocks_per_sector=Array(5).fill(4); uid_len=4; card_name="Mini 0.3K"; }
+    else if (cardType == 8) { sector_count=16; blocks_per_sector=Array(16).fill(4); uid_len=4; card_name="1K"; }
+    else if (cardType == 9) { sector_count=16; blocks_per_sector=Array(16).fill(4); uid_len=7; card_name="1K"; }
+    else if (cardType == 10) { sector_count=40; blocks_per_sector=[...Array(32).fill(4),...Array(8).fill(16)]; uid_len=4; card_name="4K"; }
+    else if (cardType == 11) { sector_count=40; blocks_per_sector=[...Array(32).fill(4),...Array(8).fill(16)]; uid_len=7; card_name="4K"; }
+    else { sector_count=16; blocks_per_sector=Array(16).fill(4); uid_len=4; card_name="1K"; }
+    uid = parseUID(document.getElementById('uid').value, uid_len, 0x04);
+    let uid_str = hexUID(uid);
+    let dump = `Filetype: Flipper NFC device
+Version: 4
+Device type: Mifare Classic
+UID: ${uid_str}
+ATQA: 00 04
+SAK: 08
+Mifare Classic type: ${card_name}
+Data format version: 2
+`;
+    let blocks = [];
+    let block_num = 0;
+    function mad_block() {
+        let mad = Array(16).fill(0x00);
+        mad[1]=0x01; mad[2]=0x03; mad[3]=0xE1;
+        let crc=0xC7; for(let i=1;i<16;i++) crc^=mad[i];
+        mad[0]=crc; return mad;
+    }
+    function trailer_block(is_mad) {
+        return is_mad
+            ? [0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0x78,0x77,0x88,0xC1,...Array(6).fill(0xFF)]
+            : [0xD3,0xF7,0xD3,0xF7,0xD3,0xF7,0x7F,0x07,0x88,0x40,...Array(6).fill(0xFF)];
+    }
+    // Block 0: UID + BCC + manufacturer
+    let block0 = [...uid, 0x08, 0x04, 0x00, ...Array(16-(uid.length+3)).fill(0xFF)];
+    blocks.push(block0); block_num++;
+    // MAD1
+    blocks.push(mad_block()); block_num++;
+    blocks.push(Array(16).fill(0x00)); block_num++;
+    blocks.push(trailer_block(true)); block_num++;
+    // NDEF в блок 4 и далее
+    let ndef = ndefBytes(tagType, data);
+    for (let i=0; i<ndef.length; i+=16) {
+        blocks.push(pad(ndef.slice(i,i+16),16));
+        block_num++;
+    }
+    // Остальные блоки
+    let total_blocks = blocks_per_sector.reduce((a,b)=>a+b,0);
+    while (block_num < total_blocks) {
+        if (block_num%4==3) blocks.push(trailer_block(false));
+        else blocks.push(Array(16).fill(0x00));
+        block_num++;
+    }
+    for (let i=0; i<blocks.length; ++i)
+        dump += `Block ${i}: ${blocks[i].map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ')}\n`;
+    return dump;
+}
+
+function generateSLIX(cardType, tagType, data, uid) {
+    // UID всегда 8 байт, первый байт 0xE0
+    uid = parseUID(document.getElementById('uid').value, 8, 0xE0);
+    let uid_str = hexUID(uid);
+    let dump = `Filetype: Flipper NFC device
+Version: 4
+Device type: SLIX
+UID: ${uid_str}
+ATQA: 00 00
+SAK: 00
+Data format version: 2
+`;
+    let ndef = ndefBytes(tagType, data);
+    let blocks = [];
+    blocks.push([0xE1,0x40,0x0F,0x01]);
+    blocks.push(pad(ndef.slice(0,4),4));
+    for (let i=2;i<28;i++) blocks.push([0,0,0,0]);
+    for (let i=0;i<blocks.length;++i)
+        dump += `Block ${i}: ${blocks[i].map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ')}\n`;
+    return dump;
+}
+
+function generateNTAG(cardType, tagType, data, uid) {
+    // NTAG 203/213/215/216/I2C
+    let nfc_types = {1:'NTAG203',2:'NTAG213',3:'NTAG215',4:'NTAG216',5:'NTAGI2C1K',6:'NTAGI2C2K'};
+    let type = nfc_types[cardType]||'NTAG215';
+    let page_counts = {'NTAG203':42,'NTAG213':45,'NTAG215':135,'NTAG216':231,'NTAGI2C1K':231,'NTAGI2C2K':587};
+    let pages = Array(page_counts[type]).fill().map(()=>[0,0,0,0]);
+    uid = parseUID(document.getElementById('uid').value, 7, 0x04);
+    // Header
+    let header = `Filetype: Flipper NFC device
+Version: 4
+Device type: NTAG/Ultralight
+UID: ${hexUID(uid)}
+ATQA: 00 44
+SAK: 00
+Data format version: 2
+NTAG/Ultralight type: ${type}
+Signature: ${Array(32).fill('00').join(' ')}
+Mifare version: 00 04 04 02 01 00 11 03
+Counter 0: 0
+Tearing 0: 00
+Counter 1: 0
+Tearing 1: 00
+Counter 2: 0
+Tearing 2: 00
+Pages total: ${page_counts[type]}
+Pages read: ${page_counts[type]}`;
+    // UID pages
+    pages[0][0]=uid[0]; pages[0][1]=uid[1]; pages[0][2]=uid[2]; pages[0][3]=uid[0]^uid[1]^uid[2];
+    pages[1][0]=uid[3]; pages[1][1]=uid[4]; pages[1][2]=uid[5]; pages[1][3]=uid[6];
+    pages[2][0]=uid[3]^uid[4]^uid[5]^uid[6]; pages[2][1]=0x48; pages[2][2]=0x00; pages[2][3]=0x00;
+    let cc_len = {'NTAG213':0x0F,'NTAG215':0x6D,'NTAG216':0xEB,'NTAG203':0x0F,'NTAGI2C1K':0xEB,'NTAGI2C2K':0xEB}[type]||0x6D;
+    pages[3]=[0xE1,0x10,cc_len,0x00];
+    // NDEF
+    let ndef = ndefBytes(tagType, data);
+    let page_idx=4, byte_idx=0;
+    for (let b of ndef) {
+        pages[page_idx][byte_idx]=b;
+        byte_idx++;
+        if (byte_idx==4) { byte_idx=0; page_idx++; }
+        if (page_idx>=pages.length) break;
+    }
+    // End pages (Flipper style)
+    let end_pages = {
+        'NTAG213':{41:[0,0,0,0xBD],42:[4,0,0,0xFF],43:[0,5,0,0],44:[0xFF,0xFF,0xFF,0xFF]},
+        'NTAG215':{130:[0,0,0,0xBD],131:[4,0,0,0xFF],132:[0,5,0,0],133:[0xFF,0xFF,0xFF,0xFF],134:[0,0,0,0]},
+        'NTAG216':{225:[0,0,0,0xBD],226:[4,0,0,0xFF],227:[0,5,0,0],228:[0xFF,0xFF,0xFF,0xFF],229:[0,0,0,0]}
+    }[type]||{};
+    for (let p in end_pages) pages[+p]=end_pages[p];
+    // Формируем дамп
+    let dump = header+'\n';
+    for (let i=0;i<pages.length;++i)
+        dump += `Page ${i}: ${pages[i].map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ')}\n`;
+    dump += 'Failed authentication attempts: 0\n';
+    return dump;
+}
+
+let lastDump = '';
+let lastFilename = 'nfc_tag.nfc';
+
+document.getElementById('nfcForm').onsubmit = function(e) {
+    e.preventDefault();
+    const cardType = parseInt(document.getElementById('cardType').value);
+    const tagType = parseInt(document.getElementById('tagType').value);
+    const data = document.getElementById('data').value.trim();
+    const uid = document.getElementById('uid').value.trim();
+    let filename = document.getElementById('filename').value.trim() || 'nfc_tag';
+    if (!filename.match(/^[a-zA-Z0-9_\-]+$/)) filename = 'nfc_tag';
+    let dump = '';
+    if ([7,8,9,10,11].includes(cardType)) {
+        dump = generateMifareClassic(cardType, tagType, data, uid);
+    } else if ([12,13,14,15].includes(cardType)) {
+        dump = generateSLIX(cardType, tagType, data, uid);
+    } else {
+        dump = generateNTAG(cardType, tagType, data, uid);
+    }
+    document.getElementById('nfcDump').textContent = dump;
+    lastDump = dump;
+    lastFilename = filename + '.nfc';
+    // Enable actions
+    document.getElementById('actionsBlock').style.display = '';
+    document.getElementById('downloadBtn').href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(dump);
+    document.getElementById('downloadBtn').download = lastFilename;
+    document.getElementById('flipperHelp').style.display = '';
+};
+
+// --- WebSerial для Flipper Zero ---
+document.getElementById('sendFlipperBtn').onclick = async function() {
+    if (!('serial' in navigator)) {
+        alert('WebSerial не поддерживается в вашем браузере!');
+        return;
+    }
+    try {
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 230400 });
+        const encoder = new TextEncoder();
+        const writer = port.writable.getWriter();
+
+        // Ctrl+C, mkdir, write, send file, Ctrl+C
+        async function sendCmd(cmd, wait=200) {
+            await writer.write(encoder.encode(cmd + '\r\n'));
+            await new Promise(r=>setTimeout(r, wait));
+        }
+        await sendCmd('\x03'); // Ctrl+C
+        await sendCmd('storage mkdir /ext/nfc');
+        await sendCmd(`storage write /ext/nfc/${lastFilename}`, 500);
+        await writer.write(encoder.encode(lastDump));
+        await new Promise(r=>setTimeout(r, 500));
+        await writer.write(encoder.encode('\r\n'));
+        await new Promise(r=>setTimeout(r, 200));
+        await writer.write(encoder.encode('\x03'));
+        writer.releaseLock();
+        await port.close();
+        alert('Файл отправлен на Flipper!');
+    } catch (e) {
+        alert('Ошибка WebSerial: ' + e);
+    }
+};
+</script>
+</body>
+</html>
