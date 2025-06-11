@@ -643,7 +643,7 @@ document.getElementById('nfcForm').onsubmit = function(e) {
     document.getElementById('downloadBtn').href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(dump);
     document.getElementById('downloadBtn').download = lastFilename;
     document.getElementById('flipperHelp').style.display = '';
-    // After generation, randomize the next UID for preview
+    // 1After generation, randomize the next UID for preview
     setRandomUidPlaceholder();
 };
 
