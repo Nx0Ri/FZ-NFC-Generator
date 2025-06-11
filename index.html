@@ -1,29 +1,146 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>NFC Generator JS (Flipper/NFC Maker)</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        body { font-family: Arial, sans-serif; background: #181c20; color: #eee; margin: 0; }
-        .container { max-width: 700px; margin: 40px auto; background: #23272c; border-radius: 12px; padding: 32px; box-shadow: 0 0 24px #0008; }
-        h1 { text-align: center; }
-        label { display: block; margin-top: 18px; }
-        input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; border: none; background: #181c20; color: #eee; }
-        button { margin-top: 24px; padding: 12px 24px; border: none; border-radius: 6px; background: #ff9100; color: #23272c; font-weight: bold; cursor: pointer; }
-        pre { background: #111; padding: 12px; border-radius: 6px; margin-top: 24px; overflow-x: auto; }
-        .footer { text-align: center; margin-top: 32px; color: #888; font-size: 0.9em; }
-        a { color: #ff9100; }
-        .actions { display: flex; gap: 16px; margin-top: 16px; }
-        .actions button, .actions a { flex: 1; }
-        #flipperHelp { color: #aaa; font-size: 0.95em; margin-top: 10px; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            margin: 0;
+        }
+        .container {
+            max-width: 480px;
+            margin: 40px auto;
+            background: #232323;
+            border-radius: 18px;
+            padding: 32px 28px 24px 28px;
+            box-shadow: 0 0 32px #ff3c0033;
+            border: 2px solid #ff3c00;
+        }
+        h1 {
+            text-align: center;
+            color: #ff3c00;
+            font-weight: 700;
+            margin-bottom: 28px;
+            letter-spacing: 1px;
+        }
+        label {
+            display: block;
+            margin-top: 18px;
+            font-size: 1.05em;
+            color: #ff9100;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 16px;
+            margin-top: 8px;
+            border-radius: 8px;
+            border: 2px solid #ff9100;
+            background: #181818;
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+            transition: border 0.2s;
+            margin-bottom: 2px;
+        }
+        input:focus, select:focus, textarea:focus {
+            border: 2px solid #ff3c00;
+        }
+        button[type="submit"] {
+            margin-top: 28px;
+            width: 100%;
+            padding: 12px 0;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #ff3c00 0%, #ff9100 100%);
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 12px #ff3c0033;
+        }
+        .actions {
+            display: flex;
+            gap: 14px;
+            margin-top: 18px;
+        }
+        .actions a, .actions button {
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 12px 0;
+            font-size: 1em;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 0 #b22a00, 0 8px 24px #ff3c0030;
+            transition: 
+                background 0.2s,
+                color 0.2s,
+                box-shadow 0.18s cubic-bezier(.4,2,.6,1),
+                transform 0.18s cubic-bezier(.4,2,.6,1);
+            will-change: transform, box-shadow;
+        }
+        .actions a {
+            background: #ff9100;
+            color: #23272c;
+            border: none;
+            text-decoration: none;
+        }
+        .actions button {
+            background: #23272c;
+            color: #ff9100;
+            border: 2px solid #ff9100;
+        }
+        .actions button:hover, .actions a:hover, button[type="submit"]:hover {
+            background: linear-gradient(90deg, #ff3c00 0%, #ff9100 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px #ff3c00a0, 0 2px 0 #b22a00;
+            transform: translateY(-4px) scale(1.04);
+            z-index: 1;
+        }
+        pre {
+            background: #181818;
+            padding: 14px;
+            border-radius: 8px;
+            margin-top: 24px;
+            overflow-x: auto;
+            font-size: 0.97em;
+            color: #ff9100;
+            border: 1px solid #ff9100;
+        }
+        #flipperHelp {
+            color: #ff9100;
+            font-size: 0.97em;
+            margin-top: 12px;
+            background: #181818;
+            border-radius: 6px;
+            padding: 10px 12px;
+            border: 1px solid #ff3c00;
+        }
+        a {
+            color: #ff3c00;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: #232323;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff9100;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>NFC Generator (JS, Flipper/NFC Maker)</h1>
     <form id="nfcForm">
-        <label>Тип карты
+        <label>Card type
             <select id="cardType">
                 <option value="1">NTAG 203</option>
                 <option value="2">NTAG 213</option>
@@ -42,7 +159,7 @@
                 <option value="15">SLIX2</option>
             </select>
         </label>
-        <label>Тип данных
+        <label>Data type
             <select id="tagType">
                 <option value="1">URL</option>
                 <option value="2">Phone</option>
@@ -60,60 +177,184 @@
                 <option value="14">HomeKit</option>
             </select>
         </label>
-        <label>Данные (см. подсказку ниже)
-            <textarea id="data" rows="3" placeholder="https://example.com или +1234567890 или SSID,Password,WPA"></textarea>
-        </label>
-        <label>UID (опционально, hex через пробел)</label>
-        <input id="uid" type="text" placeholder="04 12 34 56 78 9A BC">
-        <label>Имя файла (без .nfc)</label>
+        <div id="dynamicFields"></div>
+        <label>UID (optional, hex with spaces)</label>
+        <input id="uid" type="text" placeholder="">
+        <span id="uidPlaceholder" style="display:block; color:#888; font-size:0.97em; margin-top:2px; margin-bottom:8px;"></span>
+        <label>File name (without .nfc)</label>
         <input id="filename" type="text" placeholder="my_nfc_tag">
-        <button type="submit">Сгенерировать NFC-дамп</button>
+        <button type="submit" id="generateBtn">Generate NFC dump</button>
     </form>
-    <div style="color:#aaa;font-size:0.95em;margin-top:10px;">
-        <b>Подсказки по данным:</b><br>
-        <b>WiFi:</b> SSID,Password,WPA<br>
-        <b>Geo:</b> 55.75,37.61<br>
-        <b>SMS:</b> +79991234567,Hello<br>
-        <b>vCard:</b> BEGIN:VCARD\nVERSION:3.0\nFN:Name\nTEL:1234567890\nEND:VCARD<br>
-        <b>Custom MIME:</b> mime/type, data
-    </div>
+    <div id="platformSupport" style="margin-top:10px; margin-bottom:0; text-align:center; font-size:1em;"></div>
     <div class="actions" style="display:none;" id="actionsBlock">
-        <a id="downloadBtn" href="#" download style="text-align:center; background:#ff9100; color:#23272c; border-radius:6px; padding:12px 0; text-decoration:none; font-weight:bold;">Скачать .nfc</a>
-        <button type="button" id="sendFlipperBtn" style="background:#23272c; color:#ff9100; border:2px solid #ff9100;">Отправить на Flipper (WebSerial)</button>
+        <a id="downloadBtn" href="#" download>Download .nfc</a>
+        <button type="button" id="sendFlipperBtn">Send to Flipper (WebSerial)</button>
     </div>
-    <pre id="nfcDump"></pre>
+    <pre id="nfcDump" style="opacity:0; transform:translateY(20px); transition:opacity 0.25s cubic-bezier(.4,2,.6,1),transform 0.25s cubic-bezier(.4,2,.6,1);"></pre>
     <div id="flipperHelp" style="display:none;">
-        <b>WebSerial:</b> Подключите Flipper Zero в режиме "CLI" (Меню → Applications → CLI), выберите порт и подтвердите.<br>
-        Файл будет записан в <code>/ext/nfc/</code>.<br>
-        <b>Если WebSerial не работает:</b> скачайте файл и скопируйте его вручную на Flipper.
-    </div>
-    <div class="footer">
-        <p>Сделано для <a href="https://github.com/flipperdevices/flipperzero" target="_blank">Flipper Zero</a> | <a href="https://github.com/yourusername/yourrepo" target="_blank">GitHub</a></p>
-        <p>Генерация полностью на JS, можно использовать на GitHub Pages</p>
+        <b>WebSerial:</b> Connect your Flipper Zero to device (Phones/Tablets arent supported), select the port and confirm.<br>
+        The file will be saved to <code>/ext/nfc/</code>.<br>
+        <b>If WebSerial does not work:</b> download the file and copy it manually to your Flipper.
     </div>
 </div>
 <script>
-function randomUID(len, first) {
+// --- Platform support for each data type ---
+const tagTypeSupport = {
+    1: { ios: true, android: true, label: "iOS & Android" },
+    2: { ios: true, android: true, label: "iOS & Android" },
+    3: { ios: true, android: true, label: "iOS & Android" },
+    4: { ios: false, android: true, label: "Android" },
+    5: { ios: false, android: true, label: "Android" },
+    6: { ios: true, android: true, label: "iOS & Android" },
+    7: { ios: true, android: true, label: "iOS & Android" },
+    8: { ios: false, android: true, label: "Android" },
+    9: { ios: false, android: true, label: "Android" },
+    10: { ios: false, android: true, label: "Android" },
+    11: { ios: true, android: false, label: "iOS" },
+    12: { ios: true, android: false, label: "iOS" },
+    13: { ios: true, android: false, label: "iOS" },
+    14: { ios: true, android: false, label: "iOS" }
+};
+
+// --- Hints for each data type (removed "Example: ..." as requested) ---
+const tagTypeHints = {
+    1: "",
+    2: "",
+    3: "",
+    4: "",
+    5: "",
+    6: "",
+    7: "",
+    8: "",
+    9: "",
+    10: "",
+    11: "",
+    12: "",
+    13: "",
+    14: ""
+};
+
+// --- UID length by card type ---
+function getUidLenByCardType(cardType) {
+    if ([7, 8, 10].includes(cardType)) return 4;
+    if ([9, 11].includes(cardType)) return 7;
+    if ([12, 13, 14, 15].includes(cardType)) return 8;
+    return 7;
+}
+function getUidFirstByte(cardType) {
+    if ([12, 13, 14, 15].includes(cardType)) return 0xE0;
+    return 0x04;
+}
+
+// --- Generate random UID for placeholder ---
+function randomUIDArr(len, first) {
     let arr = [first];
-    for (let i = 1; i < len; ++i) arr.push(Math.floor(Math.random()*256));
+    for (let i = 1; i < len; ++i) arr.push(Math.floor(Math.random() * 256));
     return arr;
 }
 function hexUID(arr) {
-    return arr.map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    return arr.map(x => x.toString(16).padStart(2, '0').toUpperCase()).join(' ');
 }
+
+// --- UID placeholder logic ---
+let nextRandomUidArr = null;
+
+function setRandomUidPlaceholder() {
+    const cardType = parseInt(document.getElementById('cardType').value);
+    const uidLen = getUidLenByCardType(cardType);
+    const first = getUidFirstByte(cardType);
+    // Generate and store the next random UID for preview
+    nextRandomUidArr = randomUIDArr(uidLen, first);
+    const str = hexUID(nextRandomUidArr);
+    document.getElementById('uid').placeholder = str;
+    document.getElementById('uidPlaceholder').textContent = "";
+}
+
+// --- Update platform support and hints ---
+function updatePlatformSupportAndHints() {
+    const tagType = parseInt(document.getElementById('tagType').value);
+    const support = tagTypeSupport[tagType];
+    const hint = tagTypeHints[tagType] || "";
+    const el = document.getElementById('platformSupport');
+    el.innerHTML = `<span style="display:inline-block; padding:4px 12px; border-radius:8px; background:${
+        support.label === "iOS" ? "#007aff22" :
+        support.label === "Android" ? "#3ddc8422" : "#ff910022"
+    }; color:${
+        support.label === "iOS" ? "#007aff" :
+        support.label === "Android" ? "#3ddc84" : "#ff9100"
+    }; font-weight:600; margin-bottom:4px;">${support.label}</span>` +
+    (hint ? `<div style="margin-top:6px; color:#aaa; font-size:0.97em;">${hint}</div>` : "");
+}
+
+// --- Dynamic fields with hints ---
+const tagTypeFields = {
+    1: () => `<label>URL<input id="data_url" type="text" placeholder="https://example.com"></label>`,
+    2: () => `<label>Phone number<input id="data_phone" type="text" placeholder="+1234567890"></label>`,
+    3: () => `<label>Email<input id="data_email" type="email" placeholder="user@example.com"></label>`,
+    4: () => `<label>Text<textarea id="data_text" rows="2" placeholder="Any text"></textarea></label>`,
+    5: () => `
+        <label>WiFi SSID<input id="data_wifi_ssid" type="text" placeholder="Network name"></label>
+        <label>Password<input id="data_wifi_pwd" type="text" placeholder="Password"></label>
+        <label>Auth type
+            <select id="data_wifi_auth">
+                <option value="WPA2">WPA2</option>
+                <option value="WPA">WPA</option>
+                <option value="WEP">WEP</option>
+                <option value="NONE">None</option>
+            </select>
+        </label>
+    `,
+    6: () => `
+        <label>Latitude<input id="data_geo_lat" type="text" placeholder="55.75"></label>
+        <label>Longitude<input id="data_geo_lon" type="text" placeholder="37.61"></label>
+    `,
+    7: () => `
+        <label>Phone number<input id="data_sms_num" type="text" placeholder="+79991234567"></label>
+        <label>Message<input id="data_sms_body" type="text" placeholder="Hello"></label>
+    `,
+    8: () => `<label>vCard<textarea id="data_vcard" rows="3" placeholder="BEGIN:VCARD&#10;VERSION:3.0&#10;FN:Name&#10;TEL:1234567890&#10;END:VCARD"></textarea></label>`,
+    9: () => `<label>App package<input id="data_app" type="text" placeholder="com.example.app"></label>`,
+    10: () => `
+        <label>MIME type<input id="data_mime_type" type="text" placeholder="mime/type"></label>
+        <label>Data<input id="data_mime_data" type="text" placeholder="data"></label>
+    `,
+    11: () => `<label>FaceTime address<input id="data_facetime" type="text" placeholder="user@icloud.com"></label>`,
+    12: () => `<label>FaceTime Audio address<input id="data_facetime_audio" type="text" placeholder="user@icloud.com"></label>`,
+    13: () => `<label>Address<input id="data_maps" type="text" placeholder="1 Infinite Loop, Cupertino"></label>`,
+    14: () => `<label>HomeKit code<input id="data_homekit" type="text" placeholder="XXX-XX-XXX"></label>`
+};
+
+function updateDynamicFields() {
+    const tagType = parseInt(document.getElementById('tagType').value);
+    const container = document.getElementById('dynamicFields');
+    container.innerHTML = tagTypeFields[tagType] ? tagTypeFields[tagType]() : '';
+    updatePlatformSupportAndHints();
+}
+document.getElementById('tagType').addEventListener('change', updateDynamicFields);
+window.addEventListener('DOMContentLoaded', updateDynamicFields);
+
+// --- Dynamic UID placeholder ---
+function updateUidPlaceholder() {
+    setRandomUidPlaceholder();
+}
+document.getElementById('cardType').addEventListener('change', updateUidPlaceholder);
+window.addEventListener('DOMContentLoaded', updateUidPlaceholder);
+
+// --- Helper function for UID ---
 function parseUID(str, defLen, defFirst) {
-    if (!str) return randomUID(defLen, defFirst);
+    if (!str) return nextRandomUidArr ? nextRandomUidArr.slice() : randomUIDArr(defLen, defFirst);
     let arr = str.trim().split(/[\s,]+/).map(x=>parseInt(x,16));
-    if (arr.length !== defLen) return randomUID(defLen, defFirst);
-    arr[0] = defFirst; // enforce first byte
+    if (arr.length !== defLen) return nextRandomUidArr ? nextRandomUidArr.slice() : randomUIDArr(defLen, defFirst);
+    arr[0] = defFirst;
     return arr;
 }
+
+// --- NDEF generation ---
 function ndefBytes(tagType, data) {
-    // NDEF генерация (URL/Text/WiFi/Geo/SMS/vCard/...)
     if (tagType == 1) { // URL
         let url = data;
         let prefix = url.startsWith('https://') ? 0x04 : 0x03;
-        url = url.replace(/^https?:\/\//,'');
+        url = url.replace(/^https?:\/\//,'')
         let payload = [prefix, ...Array.from(url).map(c=>c.charCodeAt(0))];
         let ndef = [0xD1,0x01,payload.length,0x55,...payload];
         return [0x03,ndef.length,...ndef,0xFE];
@@ -197,7 +438,6 @@ function ndefBytes(tagType, data) {
         let ndef = [0xD1,0x01,payload.length,0x55,...payload];
         return [0x03,ndef.length,...ndef,0xFE];
     }
-    // fallback
     return ndefBytes(1, data);
 }
 
@@ -208,7 +448,6 @@ function pad(arr, len) {
 }
 
 function generateMifareClassic(cardType, tagType, data, uid) {
-    // cardType: 7-11
     let sector_count, blocks_per_sector, uid_len, card_name;
     if (cardType == 7) { sector_count=5; blocks_per_sector=Array(5).fill(4); uid_len=4; card_name="Mini 0.3K"; }
     else if (cardType == 8) { sector_count=16; blocks_per_sector=Array(16).fill(4); uid_len=4; card_name="1K"; }
@@ -240,20 +479,16 @@ Data format version: 2
             ? [0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0x78,0x77,0x88,0xC1,...Array(6).fill(0xFF)]
             : [0xD3,0xF7,0xD3,0xF7,0xD3,0xF7,0x7F,0x07,0x88,0x40,...Array(6).fill(0xFF)];
     }
-    // Block 0: UID + BCC + manufacturer
     let block0 = [...uid, 0x08, 0x04, 0x00, ...Array(16-(uid.length+3)).fill(0xFF)];
     blocks.push(block0); block_num++;
-    // MAD1
     blocks.push(mad_block()); block_num++;
     blocks.push(Array(16).fill(0x00)); block_num++;
     blocks.push(trailer_block(true)); block_num++;
-    // NDEF в блок 4 и далее
     let ndef = ndefBytes(tagType, data);
     for (let i=0; i<ndef.length; i+=16) {
         blocks.push(pad(ndef.slice(i,i+16),16));
         block_num++;
     }
-    // Остальные блоки
     let total_blocks = blocks_per_sector.reduce((a,b)=>a+b,0);
     while (block_num < total_blocks) {
         if (block_num%4==3) blocks.push(trailer_block(false));
@@ -266,7 +501,6 @@ Data format version: 2
 }
 
 function generateSLIX(cardType, tagType, data, uid) {
-    // UID всегда 8 байт, первый байт 0xE0
     uid = parseUID(document.getElementById('uid').value, 8, 0xE0);
     let uid_str = hexUID(uid);
     let dump = `Filetype: Flipper NFC device
@@ -288,13 +522,11 @@ Data format version: 2
 }
 
 function generateNTAG(cardType, tagType, data, uid) {
-    // NTAG 203/213/215/216/I2C
     let nfc_types = {1:'NTAG203',2:'NTAG213',3:'NTAG215',4:'NTAG216',5:'NTAGI2C1K',6:'NTAGI2C2K'};
     let type = nfc_types[cardType]||'NTAG215';
     let page_counts = {'NTAG203':42,'NTAG213':45,'NTAG215':135,'NTAG216':231,'NTAGI2C1K':231,'NTAGI2C2K':587};
     let pages = Array(page_counts[type]).fill().map(()=>[0,0,0,0]);
     uid = parseUID(document.getElementById('uid').value, 7, 0x04);
-    // Header
     let header = `Filetype: Flipper NFC device
 Version: 4
 Device type: NTAG/Ultralight
@@ -313,13 +545,11 @@ Counter 2: 0
 Tearing 2: 00
 Pages total: ${page_counts[type]}
 Pages read: ${page_counts[type]}`;
-    // UID pages
     pages[0][0]=uid[0]; pages[0][1]=uid[1]; pages[0][2]=uid[2]; pages[0][3]=uid[0]^uid[1]^uid[2];
     pages[1][0]=uid[3]; pages[1][1]=uid[4]; pages[1][2]=uid[5]; pages[1][3]=uid[6];
     pages[2][0]=uid[3]^uid[4]^uid[5]^uid[6]; pages[2][1]=0x48; pages[2][2]=0x00; pages[2][3]=0x00;
     let cc_len = {'NTAG213':0x0F,'NTAG215':0x6D,'NTAG216':0xEB,'NTAG203':0x0F,'NTAGI2C1K':0xEB,'NTAGI2C2K':0xEB}[type]||0x6D;
     pages[3]=[0xE1,0x10,cc_len,0x00];
-    // NDEF
     let ndef = ndefBytes(tagType, data);
     let page_idx=4, byte_idx=0;
     for (let b of ndef) {
@@ -328,14 +558,12 @@ Pages read: ${page_counts[type]}`;
         if (byte_idx==4) { byte_idx=0; page_idx++; }
         if (page_idx>=pages.length) break;
     }
-    // End pages (Flipper style)
     let end_pages = {
         'NTAG213':{41:[0,0,0,0xBD],42:[4,0,0,0xFF],43:[0,5,0,0],44:[0xFF,0xFF,0xFF,0xFF]},
         'NTAG215':{130:[0,0,0,0xBD],131:[4,0,0,0xFF],132:[0,5,0,0],133:[0xFF,0xFF,0xFF,0xFF],134:[0,0,0,0]},
         'NTAG216':{225:[0,0,0,0xBD],226:[4,0,0,0xFF],227:[0,5,0,0],228:[0xFF,0xFF,0xFF,0xFF],229:[0,0,0,0]}
     }[type]||{};
     for (let p in end_pages) pages[+p]=end_pages[p];
-    // Формируем дамп
     let dump = header+'\n';
     for (let i=0;i<pages.length;++i)
         dump += `Page ${i}: ${pages[i].map(x=>x.toString(16).padStart(2,'0').toUpperCase()).join(' ')}\n`;
@@ -348,34 +576,80 @@ let lastFilename = 'nfc_tag.nfc';
 
 document.getElementById('nfcForm').onsubmit = function(e) {
     e.preventDefault();
+    // Animate the generate button
+    const genBtn = document.getElementById('generateBtn');
+    genBtn.classList.remove('btn-animate');
+    // Force reflow for restart animation
+    void genBtn.offsetWidth;
+    genBtn.classList.add('btn-animate');
+
+    // Use the current placeholder UID for this generation
     const cardType = parseInt(document.getElementById('cardType').value);
     const tagType = parseInt(document.getElementById('tagType').value);
-    const data = document.getElementById('data').value.trim();
-    const uid = document.getElementById('uid').value.trim();
+    let data = '';
+    switch(tagType) {
+        case 1: data = document.getElementById('data_url').value.trim(); break;
+        case 2: data = document.getElementById('data_phone').value.trim(); break;
+        case 3: data = document.getElementById('data_email').value.trim(); break;
+        case 4: data = document.getElementById('data_text').value.trim(); break;
+        case 5: data = [
+            document.getElementById('data_wifi_ssid').value.trim(),
+            document.getElementById('data_wifi_pwd').value.trim(),
+            document.getElementById('data_wifi_auth').value.trim()
+        ].join(','); break;
+        case 6: data = [
+            document.getElementById('data_geo_lat').value.trim(),
+            document.getElementById('data_geo_lon').value.trim()
+        ].join(','); break;
+        case 7: data = [
+            document.getElementById('data_sms_num').value.trim(),
+            document.getElementById('data_sms_body').value.trim()
+        ].join(','); break;
+        case 8: data = document.getElementById('data_vcard').value.trim(); break;
+        case 9: data = document.getElementById('data_app').value.trim(); break;
+        case 10: data = [
+            document.getElementById('data_mime_type').value.trim(),
+            document.getElementById('data_mime_data').value.trim()
+        ].join(','); break;
+        case 11: data = document.getElementById('data_facetime').value.trim(); break;
+        case 12: data = document.getElementById('data_facetime_audio').value.trim(); break;
+        case 13: data = document.getElementById('data_maps').value.trim(); break;
+        case 14: data = document.getElementById('data_homekit').value.trim(); break;
+        default: data = '';
+    }
     let filename = document.getElementById('filename').value.trim() || 'nfc_tag';
     if (!filename.match(/^[a-zA-Z0-9_\-]+$/)) filename = 'nfc_tag';
     let dump = '';
     if ([7,8,9,10,11].includes(cardType)) {
-        dump = generateMifareClassic(cardType, tagType, data, uid);
+        dump = generateMifareClassic(cardType, tagType, data);
     } else if ([12,13,14,15].includes(cardType)) {
-        dump = generateSLIX(cardType, tagType, data, uid);
+        dump = generateSLIX(cardType, tagType, data);
     } else {
-        dump = generateNTAG(cardType, tagType, data, uid);
+        dump = generateNTAG(cardType, tagType, data);
     }
-    document.getElementById('nfcDump').textContent = dump;
+    // Animate NFC dump output
+    const nfcDump = document.getElementById('nfcDump');
+    nfcDump.style.opacity = 0;
+    nfcDump.style.transform = 'translateY(20px)';
+    setTimeout(() => {
+        nfcDump.textContent = dump;
+        nfcDump.style.opacity = 1;
+        nfcDump.style.transform = 'translateY(0)';
+    }, 80);
+
     lastDump = dump;
     lastFilename = filename + '.nfc';
-    // Enable actions
     document.getElementById('actionsBlock').style.display = '';
     document.getElementById('downloadBtn').href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(dump);
     document.getElementById('downloadBtn').download = lastFilename;
     document.getElementById('flipperHelp').style.display = '';
+    // After generation, randomize the next UID for preview
+    setRandomUidPlaceholder();
 };
 
-// --- WebSerial для Flipper Zero ---
 document.getElementById('sendFlipperBtn').onclick = async function() {
     if (!('serial' in navigator)) {
-        alert('WebSerial не поддерживается в вашем браузере!');
+        alert('WebSerial is not supported in your browser!');
         return;
     }
     try {
@@ -384,12 +658,11 @@ document.getElementById('sendFlipperBtn').onclick = async function() {
         const encoder = new TextEncoder();
         const writer = port.writable.getWriter();
 
-        // Ctrl+C, mkdir, write, send file, Ctrl+C
         async function sendCmd(cmd, wait=200) {
             await writer.write(encoder.encode(cmd + '\r\n'));
             await new Promise(r=>setTimeout(r, wait));
         }
-        await sendCmd('\x03'); // Ctrl+C
+        await sendCmd('\x03');
         await sendCmd('storage mkdir /ext/nfc');
         await sendCmd(`storage write /ext/nfc/${lastFilename}`, 500);
         await writer.write(encoder.encode(lastDump));
@@ -399,9 +672,9 @@ document.getElementById('sendFlipperBtn').onclick = async function() {
         await writer.write(encoder.encode('\x03'));
         writer.releaseLock();
         await port.close();
-        alert('Файл отправлен на Flipper!');
+        alert('File sent to Flipper!');
     } catch (e) {
-        alert('Ошибка WebSerial: ' + e);
+        alert('WebSerial error: ' + e);
     }
 };
 </script>
